@@ -1,0 +1,79 @@
+---
+title: "Macaulay PAC Walkathon Fundraiser Summary 2014-2019"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readxl)
+library(janitor)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(fs)
+library(stringr)
+library(ggplot2)
+library(knitr)
+```
+
+
+### Load & Tidy Excel Tally Data
+
+```{r get-data, message=FALSE}
+#filepaths for 2014-2019
+wat_files <- dir_ls("data")
+
+#function to read and tidy all files
+tidy_wat <- function(filepath){
+
+  fileyear <- str_sub(filepath, 16, 19)
+    
+    read_excel(filepath) %>% 
+    clean_names() %>% 
+    select(teacher, total_counted) %>% 
+    drop_na() %>% 
+    filter(teacher != "Total") %>% 
+    mutate(year = fileyear,
+           total_counted = as.numeric(total_counted)) 
+}
+
+#testing
+# filepath <- wat_files[1]
+# tidy_wat(filepath)
+
+#map over files, tidy & concatenate into a df
+wat_data <- wat_files %>% 
+  map_dfr(tidy_wat)
+
+head(wat_data)
+```
+
+### Total Raised and Number of Participants by Year 2014-2019
+
+```{r summary}
+wat_data %>% 
+  group_by(year) %>% 
+  summarise(total_raised = sum(total_counted),
+            number_particpants = n()) %>% 
+  knitr::kable()
+```
+
+### Frequency of Donation Amounts by Year
+
+```{r dist}
+wat_data %>% 
+  group_by(year) %>% 
+  ggplot(aes(total_counted)) +
+  geom_histogram(aes(y = ..count..), binwidth = 40) +
+  facet_wrap(~ year) +
+  geom_vline(xintercept = 40, col="blue") +
+  theme_minimal() +
+  labs(y = "number of kids/sheets",
+       x = "amount ($)",
+       caption = "vertical blue line indicates $40 mark (t-shirt incentive prize)") 
+```
+
