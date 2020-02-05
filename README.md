@@ -1,3 +1,3 @@
-## Exploring past Macaulay PAC walkathon fundraiser data.
+## Exploring past Macaulay PAC walkathon fundraiser data
 
 
