@@ -1,13 +1,12 @@
 ---
 title: "Macaulay PAC Walkathon Fundraiser Summary 2014-2019"
 output:
-  pdf_document: default
-  word_document: default
-  html_document: default
+  pdf_document:
+    latex_engine: xelatex
 ---
 
-```{r setup, include=FALSE, warning=FALSE, message=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 library(readxl)
 library(janitor)
@@ -18,12 +17,24 @@ library(fs)
 library(stringr)
 library(ggplot2)
 library(knitr)
+library(skimr)
 ```
-
 
 ### Load & Tidy Excel Tally Data
 
-```{r get-data, message=FALSE}
+```{r peek, eval = FALSE, include = FALSE}
+#take a peek at files & derive tidy steps
+wat2018 <- read_xlsx("data/WAT Tally 2018.xlsx") %>%
+  clean_names() %>% 
+  select(teacher, total_counted) %>% 
+  drop_na() %>% 
+  filter(teacher != "Total") %>% 
+  mutate(year = 2018,
+         total_counted = as.numeric(total_counted)) 
+```
+
+
+```{r get-data}
 #filepaths for 2014-2019
 wat_files <- dir_ls("data")
 
@@ -49,7 +60,7 @@ tidy_wat <- function(filepath){
 wat_data <- wat_files %>% 
   map_dfr(tidy_wat)
 
-head(wat_data)
+skim(wat_data)
 ```
 
 ### Total Raised and Number of Participants by Year 2014-2019
@@ -59,7 +70,7 @@ wat_data %>%
   group_by(year) %>% 
   summarise(total_raised = sum(total_counted),
             number_particpants = n()) %>% 
-  knitr::kable()
+  kable()
 ```
 
 ### Frequency of Donation Amounts by Year
@@ -75,5 +86,37 @@ wat_data %>%
   labs(y = "number of kids/sheets",
        x = "amount ($)",
        caption = "vertical blue line indicates $40 mark (t-shirt incentive prize)") 
+```
+
+
+### Class Totals By Year
+
+```{r}
+class_totals <- wat_data %>% 
+  mutate(teacher = recode(teacher,
+                          "LIvernoche" = "Livernoche",
+                          "Koch (Turcotte)" = "Koch",
+                          "Vally (Leung)" = "Vally")) %>% 
+  filter(teacher != "Unknown") %>% 
+  group_by(year, teacher) %>%
+  summarise(class_total = sum(total_counted))
+
+class_totals %>% 
+  ggplot(aes(year, class_total)) +
+  geom_point(size = 4) +
+  theme_minimal() +
+  labs(x = NULL, y = "class total ($)") +
+  theme(panel.grid.major.x = element_blank()) +
+  scale_y_continuous(limits = c(0, 3000), 
+                              breaks = seq(0, 3000, 500), 
+                              expand = c(0,0)) +
+  geom_hline(yintercept = 2000, col="blue") +
+  geom_hline(yintercept = 1500, col="blue")
+
+# class_totals %>% 
+#   group_by(year) %>% 
+#   top_n(3) %>% 
+#   select(-teacher) %>% 
+#   kable()
 ```
 
