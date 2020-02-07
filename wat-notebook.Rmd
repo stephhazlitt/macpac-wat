@@ -113,10 +113,16 @@ class_totals %>%
   geom_hline(yintercept = 2000, col="blue") +
   geom_hline(yintercept = 1500, col="blue")
 
-# class_totals %>% 
-#   group_by(year) %>% 
-#   top_n(3) %>% 
-#   select(-teacher) %>% 
-#   kable()
+
+```
+
+## Number of Classes Raising over $1K by Year
+
+```{r}
+class_totals %>%
+  filter(class_total >= 1000) %>% 
+  group_by(year) %>%
+  summarise(number = n()) %>% 
+  kable(caption = "Number of classes $1K or over")
 ```
 
