@@ -20,7 +20,7 @@ library(knitr)
 library(skimr)
 ```
 
-### Load & Tidy Excel Tally Data
+
 
 ```{r peek, eval = FALSE, include = FALSE}
 #take a peek at files & derive tidy steps
@@ -34,7 +34,7 @@ wat2018 <- read_xlsx("data/WAT Tally 2018.xlsx") %>%
 ```
 
 
-```{r get-data}
+```{r get-data, echo=FALSE}
 #filepaths for 2014-2019
 wat_files <- dir_ls("data")
 
@@ -60,22 +60,23 @@ tidy_wat <- function(filepath){
 wat_data <- wat_files %>% 
   map_dfr(tidy_wat)
 
-skim(wat_data)
+# skim(wat_data)
 ```
 
 ### Total Raised and Number of Participants by Year 2014-2019
 
-```{r summary}
-wat_data %>% 
+```{r summary, echo=FALSE}
+totals <- wat_data %>% 
   group_by(year) %>% 
   summarise(total_raised = sum(total_counted),
-            number_particpants = n()) %>% 
+            number_participants = n()) 
+totals %>% 
   kable()
 ```
 
 ### Frequency of Donation Amounts by Year
 
-```{r dist}
+```{r dist, echo=FALSE}
 wat_data %>% 
   group_by(year) %>% 
   ggplot(aes(total_counted)) +
@@ -91,7 +92,7 @@ wat_data %>%
 
 ### Class Totals By Year
 
-```{r}
+```{r, echo=FALSE, fig.height=4}
 class_totals <- wat_data %>% 
   mutate(teacher = recode(teacher,
                           "LIvernoche" = "Livernoche",
@@ -118,11 +119,46 @@ class_totals %>%
 
 ## Number of Classes Raising over $1K by Year
 
-```{r}
+```{r, echo=FALSE}
 class_totals %>%
   filter(class_total >= 1000) %>% 
   group_by(year) %>%
   summarise(number = n()) %>% 
   kable(caption = "Number of classes $1K or over")
+```
+
+
+## Number of Prizes Each Year
+
+```{r, echo=FALSE}
+prizes <- wat_data %>% 
+  mutate(t_shirt = ifelse(total_counted >= 40, 1, 0),
+         market_bucks = ifelse(total_counted >= 80, 1, 0),
+         rec_centre_pass = ifelse(total_counted >= 125, 1, 0),
+         hoodie = ifelse(total_counted >= 175, 1, 0),
+         gift_card = ifelse(total_counted >= 250, 1, 0)
+  ) %>% 
+  pivot_longer(cols = c("t_shirt", "market_bucks", "rec_centre_pass", "hoodie", "gift_card"),
+               names_to = "prize",
+               values_to = "value") %>% 
+  group_by(year, prize) %>% 
+  summarise(number = sum(value)) %>% 
+  pivot_wider(names_from = prize,
+              values_from = number) %>% 
+  select(year, t_shirt, market_bucks, rec_centre_pass, hoodie, gift_card)
+
+prizes %>% 
+  kable(caption = "Number of Prizes by Type & Year")
+  
+```
+
+
+# Number of Particpants Not Earning Prizes by Year
+```{r, echo=FALSE}
+prizes %>% 
+  left_join(totals) %>% 
+  select(year, t_shirt, number_participants) %>% 
+  mutate(difference = number_participants - t_shirt) %>% 
+  kable()
 ```
 
