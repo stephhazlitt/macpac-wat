@@ -72,6 +72,18 @@ totals <- wat_data %>%
             number_participants = n()) 
 totals %>% 
   kable()
+
+totals %>% 
+  summarise(min_participation = min(number_participants),
+            max_participation = max(number_participants),
+            average_participation = mean(number_participants)) %>% 
+  kable()
+
+totals %>% 
+  summarise(min_raised = min(total_raised),
+            max_raised = max(total_raised),
+            average_raised = mean(total_raised)) %>% 
+  kable()
 ```
 
 ### Frequency of Donation Amounts by Year
@@ -131,7 +143,7 @@ class_totals %>%
 ## Number of Prizes Each Year
 
 ```{r, echo=FALSE}
-prizes <- wat_data %>% 
+prize_df <- wat_data %>% 
   mutate(t_shirt = ifelse(total_counted >= 40, 1, 0),
          market_bucks = ifelse(total_counted >= 80, 1, 0),
          rec_centre_pass = ifelse(total_counted >= 125, 1, 0),
@@ -140,7 +152,9 @@ prizes <- wat_data %>%
   ) %>% 
   pivot_longer(cols = c("t_shirt", "market_bucks", "rec_centre_pass", "hoodie", "gift_card"),
                names_to = "prize",
-               values_to = "value") %>% 
+               values_to = "value")
+  
+prizes <- prize_df %>% 
   group_by(year, prize) %>% 
   summarise(number = sum(value)) %>% 
   pivot_wider(names_from = prize,
@@ -149,11 +163,56 @@ prizes <- wat_data %>%
 
 prizes %>% 
   kable(caption = "Number of Prizes by Type & Year")
-  
 ```
 
 
-# Number of Particpants Not Earning Prizes by Year
+## Prize Costing Each Year
+```{r, echo=FALSE}
+prize_df %>% 
+  group_by(year, prize) %>% 
+  summarise(number = sum(value)) %>% 
+  ungroup() %>% 
+  mutate(cost = case_when(prize == "t_shirt" ~ number*8.45,
+                          prize == "market_bucks" ~ number*10,
+                          prize == "rec_centre_pass" ~ number*15,
+                          prize == "hoodie" ~ number*25,
+                          prize == "gift_card" ~ number*25,
+                          TRUE ~ 0)) %>% 
+  group_by(prize) %>% 
+  summarize(min_number = min(number),
+            max_number = max(number),
+            average_number = round(mean(number), digits = 0),
+            cost_range = paste(min(cost), "-", max(cost)),
+            average_cost = round(mean(cost), digits = 1)) %>% 
+  mutate(unit_cost = case_when(prize == "t_shirt" ~ 8.45,
+                          prize == "market_bucks" ~ 10,
+                          prize == "rec_centre_pass" ~ 15,
+                          prize == "hoodie" ~ 25,
+                          prize == "gift_card" ~ 25,
+                          TRUE ~ 0)) %>% 
+  arrange(desc(min_number)) %>% 
+  kable()
+
+prize_df %>% 
+  group_by(year, prize) %>% 
+  summarise(number = sum(value)) %>% 
+  ungroup() %>% 
+  mutate(cost = case_when(prize == "t_shirt" ~ number*8.45,
+                          prize == "market_bucks" ~ number*10,
+                          prize == "rec_centre_pass" ~ number*15,
+                          prize == "hoodie" ~ number*25,
+                          prize == "gift_card" ~ number*25,
+                          TRUE ~ 0)) %>% 
+  group_by(year) %>% 
+  summarize(total_cost = sum(cost)) %>% 
+  left_join(totals) %>% 
+  mutate(net_raised = total_raised - total_cost,
+         proportion_spent = scales::percent(total_cost/total_raised, accuracy = 1)) %>% 
+  kable()
+```
+
+
+# Number of Participants Not Earning Prizes by Year
 ```{r, echo=FALSE}
 prizes %>% 
   left_join(totals) %>% 
